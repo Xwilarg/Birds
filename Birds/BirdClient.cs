@@ -70,6 +70,11 @@ public class BirdClient
         return Task.CompletedTask;
     }
 
+    public override string ToString()
+    {
+        return _client.CurrentUser.Username;
+    }
+
     private DiscordSocketClient _client;
     public Flock Flock { set; get; }
 }

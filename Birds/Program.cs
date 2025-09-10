@@ -21,7 +21,7 @@ public sealed class Program
         _flock = new(
             creds.Tokens.Select(x => new BirdClient(new DiscordSocketClient(new()
             {
-                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
+                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates
             }), x)
         ).ToList());
 

@@ -36,7 +36,7 @@ public class Flock
     {
         foreach (var s in _servers.Values)
         {
-            await s.TryDoActionAsync(delay, _rand, _birds);
+            await s.TryDoActionAsync(delay, _rand, _birds.Where(x => s.IsInServer(x)));
         }
     }
 
@@ -124,6 +124,8 @@ public class Flock
             if (_chans.ContainsKey(chanId)) await _chans[chanId].UpdateUserCountAsync();
         }
 
+        public bool IsInServer(BirdClient b) => b.GetServers().Contains(_guild);
+
         private int _lastAction;
         private IGuild _guild;
         private Dictionary<ulong, VoiceChanGoal> _chans = [];
@@ -150,26 +152,37 @@ public class Flock
         public async Task UpdateUserCountAsync()
         {
             UserCount = (await Channel.GetUsersAsync().FlattenAsync()).Count();
+            Console.WriteLine($"Refreshing cache for {Channel.GuildId} / {Channel.Id}: {UserCount} user(s) connected");
         }
 
         public async Task ConnectAsync(BirdClient client)
         {
+            Console.Write($"[{client}] Connecting to {Channel.GuildId} / {Channel.Id}");
             try
             {
                 await client.JoinChannelAsync(Channel);
                 ConnectedBirds.Add(client);
+                Console.WriteLine("OK");
             }
-            catch (Exception ex) { }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
         }
 
         public async Task DisconnectAsync(BirdClient client)
         {
+            Console.Write($"[{client}] Disconnecting from {Channel.GuildId} / {Channel.Id}");
             try
             {
                 await client.LeaveChannelAsync(Channel);
                 ConnectedBirds.Remove(client);
+                Console.WriteLine("OK");
             }
-            catch (Exception ex) { }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
         }
 
         public IVoiceChannel Channel { private set; get; }
