@@ -23,14 +23,17 @@ public sealed class Program
             {
                 GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
             }), x)
-        ));
+        ).ToList());
 
+        Console.WriteLine("Waiting for birds to be ready");
         await _flock.WaitForInitAsync();
+        Console.WriteLine("Initializing birds data");
         await _flock.InitChannelsAsync();
+        Console.WriteLine("Birds are ready");
 
         while (true)
         {
-            await _flock.TryDoActionAsync();
+            await _flock.TryDoActionAsync(1000);
             await Task.Delay(1000);
         }
     }

@@ -8,17 +8,40 @@ public class BirdClient
     public BirdClient(DiscordSocketClient client, string token)
     {
         _client = client;
+        _client.Ready += _client_Ready;
 
-        _rand = new();
+        _client.UserVoiceStateUpdated += _client_UserVoiceStateUpdated;
 
         Task.Run(async () => await ConnectAsync(token));
     }
 
-    public bool IsReady => _client.ConnectionState == ConnectionState.Connected;
+    private Task _client_Ready()
+    {
+        IsReady = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task _client_UserVoiceStateUpdated(SocketUser user, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
+    {
+        if (stateAfter.VoiceChannel != null) await Flock.UpdateVoiceChannelAsync(((IGuildChannel)stateAfter.VoiceChannel).GuildId, stateAfter.VoiceChannel.Id);
+        else if (stateBefore.VoiceChannel != null) await Flock.UpdateVoiceChannelAsync(((IGuildChannel)stateBefore.VoiceChannel).GuildId, stateBefore.VoiceChannel.Id);
+    }
+
+    public bool IsReady { private set; get; }
 
     public IEnumerable<IGuild> GetServers()
     {
         return _client.Guilds.Cast<IGuild>();
+    }
+
+    public async Task JoinChannelAsync(IVoiceChannel vc)
+    {
+        await vc.ConnectAsync();
+    }
+
+    public async Task LeaveChannelAsync(IVoiceChannel vc)
+    {
+        await vc.DisconnectAsync();
     }
 
     private async Task ConnectAsync(string token)
@@ -48,5 +71,5 @@ public class BirdClient
     }
 
     private DiscordSocketClient _client;
-    private Random _rand;
+    public Flock Flock { set; get; }
 }
