@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.WebSocket;
 
 namespace Birds;
 
@@ -11,6 +12,14 @@ public class Flock
         foreach (var b in _birds)
         {
             b.Flock = this;
+        }
+    }
+
+    public async Task ConnectAllAsync()
+    {
+        foreach (var b in _birds)
+        {
+            await b.ConnectAsync();
         }
     }
 
@@ -36,7 +45,7 @@ public class Flock
     {
         foreach (var s in _servers.Values)
         {
-            await s.TryDoActionAsync(delay, _rand, _birds.Where(x => s.IsInServer(x)));
+            await s.TryDoActionAsync(delay, _rand, _birds.Where(x => s.IsInServer(x)).ToList());
         }
     }
 
@@ -68,7 +77,7 @@ public class Flock
             }
         }
 
-        public async Task TryDoActionAsync(int delay, Random rand, IEnumerable<BirdClient> birds)
+        public async Task TryDoActionAsync(int delay, Random rand, IList<BirdClient> birds)
         {
             _lastAction += delay;
 
@@ -90,31 +99,39 @@ public class Flock
 
             foreach (var b in birds)
             {
-                if (rand.Next(10) == 0) // Only 1% chance a bird do something (so 1 every 10 seconds)
+                if (rand.Next(10) != 0) // Only 1% chance a bird do something (so 1 every 10 seconds)
                 {
                     continue;
                 }
 
-                if (BirdTarget == null)
+                try
                 {
-                    var connected = _chans.Values.FirstOrDefault(x => x.ConnectedBirds.Contains(b));
-                    if (connected != null)
+                    if (BirdTarget == null)
                     {
-                        await connected.DisconnectAsync(b);
+                        var connected = _chans.Values.FirstOrDefault(x => x.IsConnected(b));
+                        if (connected != null)
+                        {
+                            await connected.DisconnectAsync(b);
+                        }
+                    }
+                    else
+                    {
+                        var connected = _chans.Values.FirstOrDefault(x => x.IsConnected(b));
+                        if (connected == null)
+                        {
+                            Console.WriteLine(b);
+                            await _chans[BirdTarget.Value].ConnectAsync(b);
+                        }
+                        else if (connected.Channel.Id != BirdTarget)
+                        {
+                            await _chans[connected.Channel.Id].DisconnectAsync(b);
+                            await _chans[BirdTarget.Value].ConnectAsync(b);
+                        }
                     }
                 }
-                else
+                catch(Exception e)
                 {
-                    var connected = _chans.Values.FirstOrDefault(x => x.ConnectedBirds.Contains(b));
-                    if (connected == null)
-                    {
-                        await _chans[BirdTarget.Value].ConnectAsync(b);
-                    }
-                    else if (connected.Channel.Id != BirdTarget)
-                    {
-                        await _chans[connected.Channel.Id].DisconnectAsync(b);
-                        await _chans[BirdTarget.Value].ConnectAsync(b);
-                    }
+                    Console.WriteLine(e.ToString());
                 }
             }
         }
@@ -124,7 +141,10 @@ public class Flock
             if (_chans.ContainsKey(chanId)) await _chans[chanId].UpdateUserCountAsync();
         }
 
-        public bool IsInServer(BirdClient b) => b.GetServers().Contains(_guild);
+        public bool IsInServer(BirdClient b)
+        {
+            return b.GetServers().Any(x => x.Id == _guild.Id);
+        }
 
         private int _lastAction;
         private IGuild _guild;
@@ -151,8 +171,8 @@ public class Flock
 
         public async Task UpdateUserCountAsync()
         {
-            UserCount = (await Channel.GetUsersAsync().FlattenAsync()).Count();
-            Console.WriteLine($"Refreshing cache for {Channel.GuildId} / {Channel.Id}: {UserCount} user(s) connected");
+            UserCount = ((SocketVoiceChannel)Channel).ConnectedUsers.Where(x => !x.IsBot).Count();
+            Console.WriteLine($"Refreshing cache for {Channel.GuildId} / {Channel.Id} ({Channel.Name}): {UserCount} user(s) connected");
         }
 
         public async Task ConnectAsync(BirdClient client)
@@ -161,7 +181,6 @@ public class Flock
             try
             {
                 await client.JoinChannelAsync(Channel);
-                ConnectedBirds.Add(client);
                 Console.WriteLine("OK");
             }
             catch (Exception ex)
@@ -176,7 +195,6 @@ public class Flock
             try
             {
                 await client.LeaveChannelAsync(Channel);
-                ConnectedBirds.Remove(client);
                 Console.WriteLine("OK");
             }
             catch (Exception ex)
@@ -189,6 +207,7 @@ public class Flock
 
         public int UserCount { private set; get; }
 
-        public List<BirdClient> ConnectedBirds { private set; get; } = [];
+        public bool IsConnected(BirdClient b)
+            => ((SocketVoiceChannel)Channel).ConnectedUsers.Any(x => b.Is(x.Id));
     }
 }

@@ -25,6 +25,7 @@ public sealed class Program
             }), x)
         ).ToList());
 
+        await _flock.ConnectAllAsync();
         Console.WriteLine("Waiting for birds to be ready");
         await _flock.WaitForInitAsync();
         Console.WriteLine("Initializing birds data");

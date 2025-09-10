@@ -7,12 +7,11 @@ public class BirdClient
 {
     public BirdClient(DiscordSocketClient client, string token)
     {
+        _token = token;
         _client = client;
         _client.Ready += _client_Ready;
 
         _client.UserVoiceStateUpdated += _client_UserVoiceStateUpdated;
-
-        Task.Run(async () => await ConnectAsync(token));
     }
 
     private Task _client_Ready()
@@ -23,6 +22,8 @@ public class BirdClient
 
     private async Task _client_UserVoiceStateUpdated(SocketUser user, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
     {
+        if (user.IsBot) return;
+
         if (stateAfter.VoiceChannel != null) await Flock.UpdateVoiceChannelAsync(((IGuildChannel)stateAfter.VoiceChannel).GuildId, stateAfter.VoiceChannel.Id);
         else if (stateBefore.VoiceChannel != null) await Flock.UpdateVoiceChannelAsync(((IGuildChannel)stateBefore.VoiceChannel).GuildId, stateBefore.VoiceChannel.Id);
     }
@@ -44,11 +45,11 @@ public class BirdClient
         await vc.DisconnectAsync();
     }
 
-    private async Task ConnectAsync(string token)
+    public async Task ConnectAsync()
     {
         _client.Log += LogAsync;
 
-        await _client.LoginAsync(TokenType.Bot, token);
+        await _client.LoginAsync(TokenType.Bot, _token);
         await _client.StartAsync();
     }
 
@@ -70,6 +71,8 @@ public class BirdClient
         return Task.CompletedTask;
     }
 
+    public bool Is(ulong id) => _client.CurrentUser.Id == id;
+
     public override string ToString()
     {
         return _client.CurrentUser.Username;
@@ -77,4 +80,5 @@ public class BirdClient
 
     private DiscordSocketClient _client;
     public Flock Flock { set; get; }
+    private string _token;
 }
