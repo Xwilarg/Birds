@@ -108,6 +108,8 @@ public class Flock
         {
             _lastAction += delay;
 
+            if (_lastAction < 20) return;
+
             if (BirdTarget == null)
             {
                 if (rand.Next(10) == 0) // Set new flock objective
@@ -125,7 +127,6 @@ public class Flock
             }
             else
             {
-                Console.WriteLine($"[{BirdTarget.Value}] Current channel bird count: " + _chans[BirdTarget.Value].UserCount);
                 if (rand.Next(10) == 0 && _chans[BirdTarget.Value].UserCount == 0)
                 {
                     BirdTarget = null;
@@ -148,6 +149,7 @@ public class Flock
                         if (connected != null)
                         {
                             await connected.DisconnectAsync(b);
+                            _lastAction = 0;
                         }
                     }
                     else
@@ -157,11 +159,13 @@ public class Flock
                         {
                             Console.WriteLine(b);
                             await _chans[BirdTarget.Value].ConnectAsync(b);
+                            _lastAction = 0;
                         }
                         else if (connected.Channel.Id != BirdTarget)
                         {
                             await _chans[connected.Channel.Id].DisconnectAsync(b);
                             await _chans[BirdTarget.Value].ConnectAsync(b);
+                            _lastAction = 0;
                         }
                     }
                 }
