@@ -31,6 +31,11 @@ public class Flock
         }
     }
 
+    public async Task PerturbAsync(ulong servId, ulong chanId)
+    {
+        await _servers[servId].PerturbAsync(_rand, chanId, GetBirds(_servers[servId]));
+    }
+
     public async Task InitChannelsAsync()
     {
         _servers = _birds.SelectMany(x => x.GetServers()).DistinctBy(x => x.Id).ToDictionary(x => x.Id, x => new ServerInfo(x));
@@ -45,7 +50,7 @@ public class Flock
     {
         foreach (var s in _servers.Values)
         {
-            await s.TryDoActionAsync(delay, _rand, _birds.Where(x => s.IsInServer(x)).ToList());
+            await s.TryDoActionAsync(delay, _rand, GetBirds(s));
         }
     }
 
@@ -53,6 +58,9 @@ public class Flock
     {
         if (_servers.ContainsKey(servId)) await _servers[servId].UpdateUserCountAsync(chanId);
     }
+
+    private IEnumerable<BirdClient> GetBirds(ServerInfo s)
+        => _birds.Where(x => s.IsInServer(x));
 
     private IList<BirdClient> _birds;
     private Dictionary<ulong, ServerInfo> _servers = [];
@@ -77,7 +85,23 @@ public class Flock
             }
         }
 
-        public async Task TryDoActionAsync(int delay, Random rand, IList<BirdClient> birds)
+        public async Task PerturbAsync(Random rand, ulong chanId, IEnumerable<BirdClient> birds)
+        {
+            if (BirdTarget == chanId && rand.Next(0, 5) != 0)
+            {
+                BirdTarget = null;
+            }
+            foreach (var b in birds)
+            {
+                var connected = _chans.Values.FirstOrDefault(x => x.IsConnected(b));
+                if (connected != null && connected.Channel.Id == chanId && rand.Next(0, 3) != 0)
+                {
+                    await b.LeaveChannelAsync(connected.Channel);
+                }
+            }
+        }
+
+        public async Task TryDoActionAsync(int delay, Random rand, IEnumerable<BirdClient> birds)
         {
             _lastAction += delay;
 
@@ -94,6 +118,14 @@ public class Flock
                         BirdTarget = e.Key;
                         Console.WriteLine($"[{_guild.Id} / {_guild.Name}] Setting bird target to {BirdTarget} ({e.Value.Channel.Name})");
                     }
+                }
+            }
+            else
+            {
+                if (rand.Next(10) == 0 && _chans[BirdTarget.Value].UserCount == 0)
+                {
+                    BirdTarget = null;
+                    Console.WriteLine($"[{_guild.Id} / {_guild.Name}] Unsetting bird target");
                 }
             }
 

@@ -24,8 +24,18 @@ public class BirdClient
     {
         if (user.IsBot) return;
 
-        if (stateAfter.VoiceChannel != null) await Flock.UpdateVoiceChannelAsync(((IGuildChannel)stateAfter.VoiceChannel).GuildId, stateAfter.VoiceChannel.Id);
-        else if (stateBefore.VoiceChannel != null) await Flock.UpdateVoiceChannelAsync(((IGuildChannel)stateBefore.VoiceChannel).GuildId, stateBefore.VoiceChannel.Id);
+        if (stateAfter.VoiceChannel != null)
+        {
+            var id = ((IGuildChannel)stateAfter.VoiceChannel).GuildId;
+            await Flock.UpdateVoiceChannelAsync(id, stateAfter.VoiceChannel.Id);
+            await Flock.PerturbAsync(id, stateAfter.VoiceChannel.Id);
+        }
+        else if (stateBefore.VoiceChannel != null)
+        {
+            var id = ((IGuildChannel)stateBefore.VoiceChannel).GuildId;
+            await Flock.UpdateVoiceChannelAsync(id, stateBefore.VoiceChannel.Id);
+            await Flock.PerturbAsync(id, stateBefore.VoiceChannel.Id);
+        }
     }
 
     public bool IsReady { private set; get; }
@@ -37,12 +47,12 @@ public class BirdClient
 
     public async Task JoinChannelAsync(IVoiceChannel vc)
     {
-        await vc.ConnectAsync();
+        await ((IVoiceChannel)_client.GetChannel(vc.Id)).ConnectAsync();
     }
 
     public async Task LeaveChannelAsync(IVoiceChannel vc)
     {
-        await vc.DisconnectAsync();
+        await ((IVoiceChannel)_client.GetChannel(vc.Id)).DisconnectAsync();
     }
 
     public async Task ConnectAsync()
@@ -66,7 +76,7 @@ public class BirdClient
             LogSeverity.Debug => ConsoleColor.DarkGreen,
             _ => throw new NotImplementedException("Invalid log level " + msg.Severity)
         };
-        Console.Out.WriteLineAsync($"[{_client.CurrentUser?.Username ?? ""}] {msg}");
+        Console.WriteLine($"[{_client.CurrentUser?.Username ?? ""}] {msg}");
         Console.ForegroundColor = cc;
         return Task.CompletedTask;
     }
