@@ -87,8 +87,10 @@ public class Flock
 
         public async Task PerturbAsync(Random rand, ulong chanId, IEnumerable<BirdClient> birds)
         {
+            Console.WriteLine($"[{_guild.Id} / {_guild.Name}] Someone perturbed the birds!");
             if (BirdTarget == chanId && rand.Next(0, 5) != 0)
             {
+                Console.WriteLine($"[{_guild.Id} / {_guild.Name}] Bird were perturbed and their target was unset");
                 BirdTarget = null;
             }
             foreach (var b in birds)
@@ -96,6 +98,7 @@ public class Flock
                 var connected = _chans.Values.FirstOrDefault(x => x.IsConnected(b));
                 if (connected != null && connected.Channel.Id == chanId && rand.Next(0, 3) != 0)
                 {
+                    Console.WriteLine($"[{_guild.Id} / {_guild.Name}] {b} was perturbed and fly away");
                     await b.LeaveChannelAsync(connected.Channel);
                 }
             }
@@ -122,6 +125,7 @@ public class Flock
             }
             else
             {
+                Console.WriteLine($"[{BirdTarget.Value}] Current channel bird count: " + _chans[BirdTarget.Value].UserCount);
                 if (rand.Next(10) == 0 && _chans[BirdTarget.Value].UserCount == 0)
                 {
                     BirdTarget = null;

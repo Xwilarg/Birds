@@ -22,7 +22,9 @@ public class BirdClient
 
     private async Task _client_UserVoiceStateUpdated(SocketUser user, SocketVoiceState stateBefore, SocketVoiceState stateAfter)
     {
-        if (user.IsBot) return;
+        if (user.IsBot || (stateBefore.VoiceChannel?.Id == stateAfter.VoiceChannel?.Id)) return;
+
+        Console.WriteLine($"Change detected from {user.Username}: [Before] {stateBefore} [After] {stateAfter}");
 
         if (stateAfter.VoiceChannel != null)
         {
@@ -30,11 +32,10 @@ public class BirdClient
             await Flock.UpdateVoiceChannelAsync(id, stateAfter.VoiceChannel.Id);
             await Flock.PerturbAsync(id, stateAfter.VoiceChannel.Id);
         }
-        else if (stateBefore.VoiceChannel != null)
+        if (stateBefore.VoiceChannel != null)
         {
             var id = ((IGuildChannel)stateBefore.VoiceChannel).GuildId;
             await Flock.UpdateVoiceChannelAsync(id, stateBefore.VoiceChannel.Id);
-            await Flock.PerturbAsync(id, stateBefore.VoiceChannel.Id);
         }
     }
 
