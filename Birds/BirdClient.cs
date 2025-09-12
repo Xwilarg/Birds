@@ -11,7 +11,34 @@ public class BirdClient
         _client = client;
         _client.Ready += _client_Ready;
 
+        _client.JoinedGuild += _client_JoinedGuild;
+        _client.ChannelCreated += _client_ChannelCreated;
+        _client.ChannelDestroyed += _client_ChannelDestroyed;
+
         _client.UserVoiceStateUpdated += _client_UserVoiceStateUpdated;
+    }
+
+    private Task _client_ChannelDestroyed(SocketChannel arg)
+    {
+        if (arg is SocketVoiceChannel tChan)
+        {
+            Flock.RemoveChannel(tChan.Guild.Id, tChan);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task _client_ChannelCreated(SocketChannel arg)
+    {
+        if (arg is SocketVoiceChannel tChan)
+        {
+            await Flock.AddChannelAsync(tChan.Guild.Id, tChan);
+        }
+    }
+
+    private async Task _client_JoinedGuild(SocketGuild arg)
+    {
+        await Flock.AddGuild(arg);
     }
 
     private Task _client_Ready()

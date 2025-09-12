@@ -31,6 +31,27 @@ public class Flock
         }
     }
 
+    public async Task AddGuild(IGuild guild)
+    {
+        if (!_servers.ContainsKey(guild.Id))
+        {
+            var s = new ServerInfo(guild);
+            await s.UpdateInfoAsync();
+
+            _servers[guild.Id] = s;
+        }
+    }
+
+    public async Task AddChannelAsync(ulong guildId, IVoiceChannel chan)
+    {
+        await _servers[guildId].AddChannelAsync(chan);
+    }
+
+    public void RemoveChannel(ulong guildId, IVoiceChannel chan)
+    {
+        _servers[guildId].RemoveChannel(chan);
+    }
+
     public async Task PerturbAsync(ulong servId, ulong chanId)
     {
         await _servers[servId].PerturbAsync(_rand, chanId, GetBirds(_servers[servId]));
@@ -85,8 +106,22 @@ public class Flock
             }
         }
 
+        public async Task AddChannelAsync(IVoiceChannel chan)
+        {
+            var c = new VoiceChanGoal(chan);
+            _chans.Add(chan.Id, c);
+            await c.UpdateInfoAsync();
+        }
+
+        public void RemoveChannel(IVoiceChannel chan)
+        {
+            _chans.Remove(chan.Id);
+        }
+
         public async Task PerturbAsync(Random rand, ulong chanId, IEnumerable<BirdClient> birds)
         {
+            if (!birds.Any()) return;
+
             Console.WriteLine($"[{_guild.Id} / {_guild.Name}] Someone perturbed the birds!");
             if (BirdTarget == chanId && rand.Next(0, 5) != 0)
             {
@@ -106,6 +141,8 @@ public class Flock
 
         public async Task TryDoActionAsync(int delay, Random rand, IEnumerable<BirdClient> birds)
         {
+            if (!birds.Any()) return;
+
             _lastAction += delay;
 
             if (_lastAction < 20) return;
